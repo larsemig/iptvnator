@@ -27,7 +27,7 @@ function parseUrl(url: string): URL | null {
     }
 }
 
-function getPackagedRendererIndexPath(): string {
+export function getPackagedRendererIndexPath(): string {
     return resolve(__dirname, '..', rendererAppName, 'index.html');
 }
 
@@ -262,7 +262,13 @@ export default class App {
         }
     }
 
-    private static handleRendererNavigation(
+    /**
+     * Contain renderer-initiated navigation: trusted in-app URLs are allowed,
+     * external URLs open in the OS browser, everything else is blocked. Public
+     * static so child windows (e.g. the embedded-MPV overlay window) can attach
+     * the same containment as the main window.
+     */
+    static handleRendererNavigation(
         event: Electron.Event,
         url: string
     ): void {
@@ -283,13 +289,24 @@ export default class App {
      * renderer-drawn window controls (`app-window-controls`) wired up via the
      * WINDOW:* IPC channels. `frame` stays untouched so native resize borders
      * and snapping keep working.
+     *
+     * macOS additionally makes the window TRANSPARENT: the immersive embedded
+     * MPV overlay composites the native video surface BELOW the WebContents, so
+     * the web layer must be transparent over the player region for the video to
+     * show through. `transparent`/`backgroundColor:'#00000000'` open that path.
+     * `titleBarOverlay` is dropped on macOS because the web-drawn controls
+     * overlay does not compose with a transparent window there; the native
+     * traffic lights still render via `titleBarStyle:'hidden'`. Transparency is
+     * macOS-only — transparent windows behave badly on Windows/Linux and the
+     * embedded MPV there uses a different (`--wid`) path that does not need it.
      */
     private static getPlatformTitleBarOptions(): Electron.BrowserWindowConstructorOptions {
         if (process.platform === 'darwin') {
             return {
                 titleBarStyle: 'hidden',
-                titleBarOverlay: true,
                 trafficLightPosition: { x: 16, y: 20 },
+                transparent: true,
+                backgroundColor: '#00000000',
             };
         }
 

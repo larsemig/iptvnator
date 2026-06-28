@@ -4,6 +4,7 @@ import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
 import { DataService } from '@iptvnator/services';
 import { Channel } from '@iptvnator/shared/interfaces';
+import { WEB_PLAYER_SHARED_CONTROLS } from '../player-controls';
 import { HtmlVideoPlayerComponent } from './html-video-player.component';
 
 describe('HtmlVideoPlayerComponent', () => {
@@ -305,6 +306,16 @@ describe('HtmlVideoPlayerComponent', () => {
         expect(events).toEqual(['ended']);
     });
 
+    it('keeps the native skin and no shared controls when the flag is OFF', () => {
+        expect(component.sharedControls).toBe(false);
+        expect(
+            component.videoPlayer.nativeElement.hasAttribute('controls')
+        ).toBe(true);
+        expect(
+            fixture.debugElement.query(By.css('app-player-controls'))
+        ).toBeNull();
+    });
+
     it('hides series navigation controls when series navigation is absent', () => {
         expect(
             fixture.debugElement.query(
@@ -360,5 +371,41 @@ describe('HtmlVideoPlayerComponent', () => {
         nextButton.nativeElement.click();
 
         expect(events).toEqual(['previous']);
+    });
+
+    describe('with shared controls flag ON', () => {
+        let onFixture: ComponentFixture<HtmlVideoPlayerComponent>;
+
+        beforeEach(waitForAsync(() => {
+            TestBed.resetTestingModule();
+            TestBed.configureTestingModule({
+                imports: [HtmlVideoPlayerComponent, TranslateModule.forRoot()],
+                providers: [
+                    {
+                        provide: DataService,
+                        useValue: { sendIpcEvent: jest.fn() },
+                    },
+                    { provide: WEB_PLAYER_SHARED_CONTROLS, useValue: true },
+                ],
+            }).compileComponents();
+        }));
+
+        beforeEach(() => {
+            onFixture = TestBed.createComponent(HtmlVideoPlayerComponent);
+            onFixture.detectChanges();
+        });
+
+        afterEach(() => onFixture.destroy());
+
+        it('removes the native skin and renders shared controls', () => {
+            const onComponent = onFixture.componentInstance;
+            expect(onComponent.sharedControls).toBe(true);
+            expect(
+                onComponent.videoPlayer.nativeElement.hasAttribute('controls')
+            ).toBe(false);
+            expect(
+                onFixture.debugElement.query(By.css('app-player-controls'))
+            ).not.toBeNull();
+        });
     });
 });

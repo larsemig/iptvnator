@@ -1,27 +1,6 @@
-import {
-    EmbeddedMpvFeedback,
-    EmbeddedMpvMenuState,
-} from './embedded-mpv-ui-state';
+import { ControlsFeedback } from './controls-feedback';
 
-describe('EmbeddedMpvMenuState', () => {
-    it('keeps only one menu open at a time', () => {
-        const menus = new EmbeddedMpvMenuState();
-
-        menus.open('volume');
-        expect(menus.volumeOpen()).toBe(true);
-        expect(menus.anyOpen()).toBe(true);
-
-        menus.open('audio');
-        expect(menus.volumeOpen()).toBe(false);
-        expect(menus.audioOpen()).toBe(true);
-
-        menus.toggle('audio');
-        expect(menus.audioOpen()).toBe(false);
-        expect(menus.anyOpen()).toBe(false);
-    });
-});
-
-describe('EmbeddedMpvFeedback', () => {
+describe('ControlsFeedback', () => {
     beforeEach(() => {
         jest.useFakeTimers();
     });
@@ -31,7 +10,7 @@ describe('EmbeddedMpvFeedback', () => {
     });
 
     it('flashes feedback and clears the previous timeout when replaced', () => {
-        const feedback = new EmbeddedMpvFeedback();
+        const feedback = new ControlsFeedback();
 
         feedback.flash('volume_up', '60%', 700);
         expect(feedback.current()).toEqual({
@@ -55,7 +34,7 @@ describe('EmbeddedMpvFeedback', () => {
     });
 
     it('disposes pending feedback timers', () => {
-        const feedback = new EmbeddedMpvFeedback();
+        const feedback = new ControlsFeedback();
 
         feedback.flash('volume_off', 'Muted', 700);
         feedback.dispose();

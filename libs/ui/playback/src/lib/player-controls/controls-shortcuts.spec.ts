@@ -1,7 +1,7 @@
-import { EmbeddedMpvShortcuts } from './embedded-mpv-shortcuts';
+import { ControlsShortcuts } from './controls-shortcuts';
 
-describe('EmbeddedMpvShortcuts', () => {
-    let shortcuts: EmbeddedMpvShortcuts;
+describe('ControlsShortcuts', () => {
+    let shortcuts: ControlsShortcuts;
     let handlers: {
         isAvailable: jest.Mock<boolean, []>;
         onEscape: jest.Mock;
@@ -13,7 +13,7 @@ describe('EmbeddedMpvShortcuts', () => {
     };
 
     beforeEach(() => {
-        shortcuts = new EmbeddedMpvShortcuts();
+        shortcuts = new ControlsShortcuts();
         handlers = {
             isAvailable: jest.fn(() => true),
             onEscape: jest.fn(),

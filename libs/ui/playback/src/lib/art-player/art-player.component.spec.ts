@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Channel } from '@iptvnator/shared/interfaces';
+import { WEB_PLAYER_SHARED_CONTROLS } from '../player-controls';
 import type { ArtPlayerComponent as ArtPlayerComponentInstance } from './art-player.component';
 
 const artPlayerInstances: MockArtplayer[] = [];
@@ -279,6 +280,20 @@ describe('ArtPlayerComponent', () => {
         expect(events).toEqual(['ended']);
     });
 
+    it('keeps the ArtPlayer skin and no shared controls when the flag is OFF', () => {
+        createComponent({
+            url: 'https://example.com/movie.mp4',
+            name: 'Movie',
+        });
+
+        expect(component.sharedControls).toBe(false);
+        expect(artPlayerInstances[0].options['setting']).toBe(true);
+        expect(artPlayerInstances[0].options['fullscreen']).toBe(true);
+        expect(
+            fixture.debugElement.query(By.css('app-player-controls'))
+        ).toBeNull();
+    });
+
     it('hides series navigation controls when series navigation is absent', () => {
         createComponent({
             url: 'https://example.com/movie.mp4',
@@ -343,6 +358,33 @@ describe('ArtPlayerComponent', () => {
         nextButton.nativeElement.click();
 
         expect(events).toEqual(['previous']);
+    });
+
+    describe('with shared controls flag ON', () => {
+        beforeEach(() => {
+            TestBed.resetTestingModule();
+            TestBed.configureTestingModule({
+                imports: [ArtPlayerComponent],
+                providers: [
+                    { provide: WEB_PLAYER_SHARED_CONTROLS, useValue: true },
+                ],
+            });
+        });
+
+        it('disables the ArtPlayer skin and renders shared controls', () => {
+            createComponent({
+                url: 'https://example.com/movie.mp4',
+                name: 'Movie',
+            });
+
+            expect(component.sharedControls).toBe(true);
+            expect(artPlayerInstances[0].options['setting']).toBe(false);
+            expect(artPlayerInstances[0].options['fullscreen']).toBe(false);
+            expect(artPlayerInstances[0].options['controls']).toEqual([]);
+            expect(
+                fixture.debugElement.query(By.css('app-player-controls'))
+            ).not.toBeNull();
+        });
     });
 
     function createComponent(channel: Pick<Channel, 'url' | 'name'>): void {
