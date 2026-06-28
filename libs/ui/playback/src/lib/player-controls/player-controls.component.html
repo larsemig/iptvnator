@@ -1,0 +1,456 @@
+@if (feedback.current(); as fb) {
+    <div
+        class="player-controls__feedback"
+        [attr.data-feedback-key]="fb.key"
+        aria-hidden="true"
+    >
+        <mat-icon>{{ fb.icon }}</mat-icon>
+        <span>{{ fb.label }}</span>
+    </div>
+}
+
+@if (showControls()) {
+    <div
+        #controlsBar
+        class="player-controls__bar"
+        [class.player-controls__bar--visible]="controlsAreVisible()"
+        (pointerenter)="onBarPointerEnter()"
+        (pointerleave)="onBarPointerLeave()"
+    >
+        <div class="player-controls__transport">
+            <button
+                mat-icon-button
+                type="button"
+                class="player-controls__button"
+                [disabled]="isLoading()"
+                (click)="togglePlay()"
+                [attr.aria-label]="isPaused() ? 'Play' : 'Pause'"
+                [matTooltip]="isPaused() ? 'Play' : 'Pause'"
+                matTooltipPosition="above"
+            >
+                <mat-icon>{{ isPaused() ? 'play_arrow' : 'pause' }}</mat-icon>
+            </button>
+
+            @if (capabilities().seriesNavigation) {
+                <button
+                    mat-icon-button
+                    type="button"
+                    class="player-controls__button"
+                    data-test-id="player-controls-previous-episode"
+                    [disabled]="isLoading() || !state().canPreviousEpisode"
+                    (click)="requestPreviousEpisode()"
+                    aria-label="Previous episode"
+                    matTooltip="Previous episode"
+                    matTooltipPosition="above"
+                >
+                    <mat-icon>skip_previous</mat-icon>
+                </button>
+
+                <button
+                    mat-icon-button
+                    type="button"
+                    class="player-controls__button"
+                    data-test-id="player-controls-next-episode"
+                    [disabled]="isLoading() || !state().canNextEpisode"
+                    (click)="requestNextEpisode()"
+                    aria-label="Next episode"
+                    matTooltip="Next episode"
+                    matTooltipPosition="above"
+                >
+                    <mat-icon>skip_next</mat-icon>
+                </button>
+            }
+
+            @if (capabilities().seek) {
+                <button
+                    mat-icon-button
+                    type="button"
+                    class="player-controls__button"
+                    [disabled]="!state().canSeek"
+                    (click)="seekBy(-10)"
+                    aria-label="Back 10 seconds"
+                    matTooltip="Back 10 seconds"
+                    matTooltipPosition="above"
+                >
+                    <mat-icon>replay_10</mat-icon>
+                </button>
+
+                <button
+                    mat-icon-button
+                    type="button"
+                    class="player-controls__button"
+                    [disabled]="!state().canSeek"
+                    (click)="seekBy(10)"
+                    aria-label="Forward 10 seconds"
+                    matTooltip="Forward 10 seconds"
+                    matTooltipPosition="above"
+                >
+                    <mat-icon>forward_10</mat-icon>
+                </button>
+            }
+        </div>
+
+        <div class="player-controls__timeline">
+            <input
+                class="player-controls__slider"
+                [style.--slider-progress.%]="
+                    state().canSeek
+                        ? (state().positionSeconds /
+                              ((state().durationSeconds ?? 0) || 1)) *
+                          100
+                        : 0
+                "
+                type="range"
+                min="0"
+                [max]="state().durationSeconds ?? 0"
+                [value]="state().positionSeconds"
+                [disabled]="!state().canSeek"
+                [attr.aria-valuetext]="formatTime(state().positionSeconds)"
+                (input)="onTimelineInput($event)"
+            />
+            <div class="player-controls__time">
+                <span>{{ formatTime(state().positionSeconds) }}</span>
+                @if (state().canSeek) {
+                    <span>{{ formatTime(state().durationSeconds) }}</span>
+                } @else if (state().isLive) {
+                    <span class="player-controls__live-badge" aria-label="Live stream">
+                        <span
+                            class="player-controls__live-dot"
+                            aria-hidden="true"
+                        ></span>
+                        LIVE
+                    </span>
+                } @else {
+                    <span>--:--</span>
+                }
+            </div>
+            @if (recordingStatusText(); as recordingStatus) {
+                <div
+                    class="player-controls__recording-status"
+                    [class.player-controls__recording-status--active]="
+                        isRecording()
+                    "
+                    [attr.aria-live]="isRecording() ? 'off' : 'polite'"
+                >
+                    <mat-icon>{{
+                        isRecording() ? 'fiber_manual_record' : 'check_circle'
+                    }}</mat-icon>
+                    <span>{{ recordingStatus }}</span>
+                </div>
+            }
+        </div>
+
+        <div class="player-controls__actions">
+            @if (capabilities().volume) {
+                <div
+                    class="player-controls__popover-anchor"
+                    (pointerenter)="onVolumeHoverEnter()"
+                    (pointerleave)="onVolumeHoverLeave()"
+                    (focusin)="onVolumeHoverEnter()"
+                    (focusout)="onVolumeHoverLeave()"
+                    (wheel)="onVolumeWheel($event)"
+                >
+                    <button
+                        mat-icon-button
+                        type="button"
+                        class="player-controls__button"
+                        (click)="toggleMute()"
+                        [attr.aria-label]="
+                            displayVolume() <= 0 ? 'Unmute' : 'Mute'
+                        "
+                        [matTooltip]="displayVolume() <= 0 ? 'Unmute' : 'Mute'"
+                        matTooltipPosition="above"
+                    >
+                        <mat-icon>{{ volumeIcon() }}</mat-icon>
+                    </button>
+                    @if (menus.volumeOpen()) {
+                        <div
+                            class="player-controls__panel player-controls__volume-popover"
+                            role="dialog"
+                            aria-label="Volume"
+                        >
+                            <input
+                                class="player-controls__slider player-controls__slider--volume"
+                                [style.--slider-progress.%]="displayVolume() * 100"
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                [value]="displayVolume()"
+                                [attr.aria-label]="volumeLabel()"
+                                [attr.aria-valuetext]="volumeLabel()"
+                                (input)="onVolumeInput($event)"
+                            />
+                            <span class="player-controls__volume-value">
+                                {{ volumeLabel() }}
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (hasAudioTracks()) {
+                <div class="player-controls__popover-anchor">
+                    <button
+                        mat-icon-button
+                        type="button"
+                        class="player-controls__button"
+                        (click)="toggleMenu('audio')"
+                        [attr.aria-expanded]="menus.audioOpen()"
+                        aria-label="Audio tracks"
+                        matTooltip="Audio tracks"
+                        matTooltipPosition="above"
+                    >
+                        <mat-icon>graphic_eq</mat-icon>
+                    </button>
+                    @if (menus.audioOpen()) {
+                        <div
+                            class="player-controls__panel player-controls__track-popover"
+                            role="menu"
+                            aria-label="Audio tracks"
+                        >
+                            <div class="player-controls__menu-title">
+                                Audio tracks
+                            </div>
+                            <div class="player-controls__track-list">
+                                @for (
+                                    track of state().audioTracks;
+                                    track track.id
+                                ) {
+                                    <button
+                                        type="button"
+                                        role="menuitemradio"
+                                        [attr.aria-checked]="track.selected"
+                                        class="player-controls__track"
+                                        [class.player-controls__track--selected]="
+                                            track.selected
+                                        "
+                                        (click)="menuSelection.audioTrack(track.id)"
+                                    >
+                                        <span>{{ track.label }}</span>
+                                        @if (track.selected) {
+                                            <mat-icon>check</mat-icon>
+                                        }
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (hasSubtitleTracks()) {
+                <div class="player-controls__popover-anchor">
+                    <button
+                        mat-icon-button
+                        type="button"
+                        class="player-controls__button"
+                        (click)="toggleMenu('subtitle')"
+                        [attr.aria-expanded]="menus.subtitleOpen()"
+                        aria-label="Subtitles"
+                        matTooltip="Subtitles"
+                        matTooltipPosition="above"
+                    >
+                        <mat-icon>{{
+                            state().subtitlesEnabled
+                                ? 'subtitles'
+                                : 'subtitles_off'
+                        }}</mat-icon>
+                    </button>
+                    @if (menus.subtitleOpen()) {
+                        <div
+                            class="player-controls__panel player-controls__track-popover"
+                            role="menu"
+                            aria-label="Subtitles"
+                        >
+                            <div class="player-controls__menu-title">Subtitles</div>
+                            <div class="player-controls__track-list">
+                                <button
+                                    type="button"
+                                    role="menuitemradio"
+                                    [attr.aria-checked]="
+                                        !state().subtitlesEnabled
+                                    "
+                                    class="player-controls__track"
+                                    [class.player-controls__track--selected]="
+                                        !state().subtitlesEnabled
+                                    "
+                                    (click)="menuSelection.subtitleTrack(-1)"
+                                >
+                                    <span>Off</span>
+                                    @if (!state().subtitlesEnabled) {
+                                        <mat-icon>check</mat-icon>
+                                    }
+                                </button>
+                                @for (
+                                    track of state().subtitleTracks;
+                                    track track.id
+                                ) {
+                                    <button
+                                        type="button"
+                                        role="menuitemradio"
+                                        [attr.aria-checked]="track.selected"
+                                        class="player-controls__track"
+                                        [class.player-controls__track--selected]="
+                                            track.selected
+                                        "
+                                        (click)="menuSelection.subtitleTrack(track.id)"
+                                    >
+                                        <span>{{ track.label }}</span>
+                                        @if (track.selected) {
+                                            <mat-icon>check</mat-icon>
+                                        }
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (capabilities().playbackSpeed) {
+                <div class="player-controls__popover-anchor">
+                    <button
+                        mat-icon-button
+                        type="button"
+                        class="player-controls__button"
+                        (click)="toggleMenu('speed')"
+                        [attr.aria-expanded]="menus.speedOpen()"
+                        aria-label="Playback speed"
+                        [matTooltip]="'Speed: ' + state().playbackSpeed + '×'"
+                        matTooltipPosition="above"
+                    >
+                        <mat-icon>speed</mat-icon>
+                    </button>
+                    @if (menus.speedOpen()) {
+                        <div
+                            class="player-controls__panel player-controls__track-popover"
+                            role="menu"
+                            aria-label="Playback speed"
+                        >
+                            <div class="player-controls__menu-title">Speed</div>
+                            <div class="player-controls__track-list">
+                                @for (
+                                    preset of state().speedPresets;
+                                    track preset.value
+                                ) {
+                                    <button
+                                        type="button"
+                                        role="menuitemradio"
+                                        [attr.aria-checked]="
+                                            preset.value === state().playbackSpeed
+                                        "
+                                        class="player-controls__track"
+                                        [class.player-controls__track--selected]="
+                                            preset.value === state().playbackSpeed
+                                        "
+                                        (click)="menuSelection.speed(preset.value)"
+                                    >
+                                        <span>{{ preset.label }}</span>
+                                        @if (
+                                            preset.value === state().playbackSpeed
+                                        ) {
+                                            <mat-icon>check</mat-icon>
+                                        }
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (capabilities().aspectRatio) {
+                <div class="player-controls__popover-anchor">
+                    <button
+                        mat-icon-button
+                        type="button"
+                        class="player-controls__button"
+                        (click)="toggleMenu('aspect')"
+                        [attr.aria-expanded]="menus.aspectOpen()"
+                        aria-label="Aspect ratio"
+                        matTooltip="Aspect ratio"
+                        matTooltipPosition="above"
+                    >
+                        <mat-icon>aspect_ratio</mat-icon>
+                    </button>
+                    @if (menus.aspectOpen()) {
+                        <div
+                            class="player-controls__panel player-controls__track-popover"
+                            role="menu"
+                            aria-label="Aspect ratio"
+                        >
+                            <div class="player-controls__menu-title">Aspect</div>
+                            <div class="player-controls__track-list">
+                                @for (
+                                    preset of state().aspectPresets;
+                                    track preset.value
+                                ) {
+                                    <button
+                                        type="button"
+                                        role="menuitemradio"
+                                        [attr.aria-checked]="
+                                            preset.value === state().aspectRatio
+                                        "
+                                        class="player-controls__track"
+                                        [class.player-controls__track--selected]="
+                                            preset.value === state().aspectRatio
+                                        "
+                                        (click)="menuSelection.aspect(preset.value)"
+                                    >
+                                        <span>{{ preset.label }}</span>
+                                        @if (
+                                            preset.value === state().aspectRatio
+                                        ) {
+                                            <mat-icon>check</mat-icon>
+                                        }
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (canRecord()) {
+                <button
+                    mat-icon-button
+                    type="button"
+                    class="player-controls__button player-controls__record-button"
+                    [class.player-controls__record-button--active]="isRecording()"
+                    [disabled]="isLoading()"
+                    (click)="toggleRecording()"
+                    [attr.aria-pressed]="isRecording()"
+                    [attr.aria-label]="
+                        isRecording() ? 'Stop recording' : 'Start recording'
+                    "
+                    [matTooltip]="
+                        isRecording() ? 'Stop recording' : 'Start recording'
+                    "
+                    matTooltipPosition="above"
+                >
+                    <mat-icon>{{
+                        isRecording() ? 'stop_circle' : 'fiber_manual_record'
+                    }}</mat-icon>
+                </button>
+            }
+
+            @if (capabilities().fullscreen) {
+                <button
+                    mat-icon-button
+                    type="button"
+                    class="player-controls__button"
+                    [disabled]="!canFullscreen()"
+                    (click)="toggleFullscreen()"
+                    [attr.aria-label]="fullscreenLabel()"
+                    [matTooltip]="fullscreenLabel()"
+                    matTooltipPosition="above"
+                >
+                    <mat-icon>{{
+                        isFullscreen() ? 'fullscreen_exit' : 'fullscreen'
+                    }}</mat-icon>
+                </button>
+            }
+        </div>
+    </div>
+}

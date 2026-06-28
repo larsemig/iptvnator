@@ -10,6 +10,7 @@ import {
 } from '@iptvnator/epg/data-access';
 import { WORKSPACE_SHELL_ACTIONS } from '@iptvnator/workspace/shell/util';
 import { EpgProgressPanelComponent } from '@iptvnator/ui/epg/progress-panel';
+import { EmbeddedMpvImmersiveBackdropComponent } from '@iptvnator/ui/playback/embedded-mpv-player';
 import { WindowControlsComponent } from '@iptvnator/ui/components';
 import { PlaylistActions, selectAllPlaylistsMeta } from '@iptvnator/m3u-state';
 import { filter, take } from 'rxjs';
@@ -34,7 +35,12 @@ const debugAppComponent = createDevLogger('AppComponent');
 @Component({
     selector: 'app-root',
     templateUrl: './app.component.html',
-    imports: [EpgProgressPanelComponent, RouterOutlet, WindowControlsComponent],
+    imports: [
+        EmbeddedMpvImmersiveBackdropComponent,
+        EpgProgressPanelComponent,
+        RouterOutlet,
+        WindowControlsComponent,
+    ],
 })
 export class AppComponent implements OnInit {
     @HostBinding('class.macos-platform') get isMacOS() {

@@ -1,11 +1,11 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import {
     EmbeddedMpvSession,
     ResolvedPortalPlayback,
 } from '@iptvnator/shared/interfaces';
-import { EmbeddedMpvOverlayVisibilityService } from './embedded-mpv-overlay-visibility.service';
+import { PlayerControlsComponent } from '../player-controls';
 import { EmbeddedMpvPlayerComponent } from './embedded-mpv-player.component';
 import { EmbeddedMpvSessionController } from './embedded-mpv-session-controller';
 
@@ -97,12 +97,6 @@ describe('EmbeddedMpvPlayerComponent series navigation', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [EmbeddedMpvPlayerHostComponent],
-            providers: [
-                {
-                    provide: EmbeddedMpvOverlayVisibilityService,
-                    useValue: { overlayActive: signal(false) },
-                },
-            ],
         }).compileComponents();
 
         fixture = TestBed.createComponent(EmbeddedMpvPlayerHostComponent);
@@ -117,10 +111,10 @@ describe('EmbeddedMpvPlayerComponent series navigation', () => {
 
     it('renders previous and next episode controls with season boundary disabled state', () => {
         const previousButton = fixture.debugElement.query(
-            By.css('[data-test-id="embedded-mpv-previous-episode"]')
+            By.css('[data-test-id="player-controls-previous-episode"]')
         );
         const nextButton = fixture.debugElement.query(
-            By.css('[data-test-id="embedded-mpv-next-episode"]')
+            By.css('[data-test-id="player-controls-next-episode"]')
         );
 
         expect(previousButton).not.toBeNull();
@@ -133,6 +127,38 @@ describe('EmbeddedMpvPlayerComponent series navigation', () => {
 
         expect(fixture.componentInstance.previousCount).toBe(1);
         expect(fixture.componentInstance.nextCount).toBe(0);
+    });
+
+    it('renders the inline controls docked over an opaque root', () => {
+        // Docked path: the inline app-player-controls render in the main window
+        // and the root stays opaque — the native surface is composited above
+        // the WebContents and shrunk to expose the controls strip.
+        const controlsDebugElement = fixture.debugElement.query(
+            By.directive(PlayerControlsComponent)
+        );
+        expect(controlsDebugElement).not.toBeNull();
+
+        const root = fixture.debugElement.query(
+            By.css('.embedded-mpv-player')
+        );
+        expect(
+            (root.nativeElement as HTMLElement).classList.contains(
+                'embedded-mpv-player--transparent'
+            )
+        ).toBe(false);
+    });
+
+    it('passes the player root element (not a signal) as the docked controls surface', () => {
+        const controlsDebugElement = fixture.debugElement.query(
+            By.directive(PlayerControlsComponent)
+        );
+        expect(controlsDebugElement).not.toBeNull();
+
+        const controls =
+            controlsDebugElement.componentInstance as PlayerControlsComponent;
+        // S4 regression: the docked template must unwrap the viewChild signal
+        // (playerRoot()?.nativeElement) rather than binding the signal itself.
+        expect(controls.playerSurface()).toBeInstanceOf(HTMLElement);
     });
 
     it('emits playbackEnded exactly once for an ended session snapshot', () => {
@@ -179,17 +205,17 @@ describe('EmbeddedMpvPlayerComponent series navigation', () => {
 
         expect(
             fixture.debugElement.query(
-                By.css('[data-test-id="embedded-mpv-previous-episode"]')
+                By.css('[data-test-id="player-controls-previous-episode"]')
             )
         ).toBeNull();
         expect(
             fixture.debugElement.query(
-                By.css('[data-test-id="embedded-mpv-next-episode"]')
+                By.css('[data-test-id="player-controls-next-episode"]')
             )
         ).toBeNull();
         expect(
             fixture.debugElement.query(
-                By.css('.embedded-mpv-player__live-badge')
+                By.css('.player-controls__live-badge')
             )
         ).not.toBeNull();
         expect(
@@ -203,7 +229,7 @@ describe('EmbeddedMpvPlayerComponent series navigation', () => {
             ).nativeElement.disabled
         ).toBe(true);
         expect(
-            fixture.debugElement.query(By.css('.embedded-mpv-player__slider'))
+            fixture.debugElement.query(By.css('.player-controls__slider'))
                 .nativeElement.disabled
         ).toBe(true);
     });
@@ -220,9 +246,7 @@ describe('EmbeddedMpvPlayerComponent series navigation', () => {
         fixture.detectChanges();
 
         expect(
-            fixture.debugElement.query(
-                By.css('.embedded-mpv-player__live-badge')
-            )
+            fixture.debugElement.query(By.css('.player-controls__live-badge'))
         ).toBeNull();
         expect(fixture.nativeElement.textContent).toContain('--:--');
     });

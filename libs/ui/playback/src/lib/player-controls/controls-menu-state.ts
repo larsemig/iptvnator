@@ -1,17 +1,12 @@
 import { computed, signal } from '@angular/core';
 
-export type EmbeddedMpvMenu =
-    | 'volume'
-    | 'audio'
-    | 'subtitle'
-    | 'speed'
-    | 'aspect';
+export type ControlsMenu = 'volume' | 'audio' | 'subtitle' | 'speed' | 'aspect';
 
 /**
  * Tracks which menu/popover is currently open and exposes individual signals
  * the template binds to. Only one menu can be open at a time.
  */
-export class EmbeddedMpvMenuState {
+export class ControlsMenuState {
     readonly volumeOpen = signal(false);
     readonly audioOpen = signal(false);
     readonly subtitleOpen = signal(false);
@@ -27,14 +22,14 @@ export class EmbeddedMpvMenuState {
             this.aspectOpen()
     );
 
-    toggle(menu: EmbeddedMpvMenu): void {
+    toggle(menu: ControlsMenu): void {
         const target = this.signalFor(menu);
         const next = !target();
         this.closeAll();
         target.set(next);
     }
 
-    open(menu: EmbeddedMpvMenu): void {
+    open(menu: ControlsMenu): void {
         if (this.signalFor(menu)()) {
             return;
         }
@@ -42,7 +37,7 @@ export class EmbeddedMpvMenuState {
         this.signalFor(menu).set(true);
     }
 
-    close(menu: EmbeddedMpvMenu): void {
+    close(menu: ControlsMenu): void {
         this.signalFor(menu).set(false);
     }
 
@@ -54,7 +49,7 @@ export class EmbeddedMpvMenuState {
         this.aspectOpen.set(false);
     }
 
-    private signalFor(menu: EmbeddedMpvMenu) {
+    private signalFor(menu: ControlsMenu) {
         switch (menu) {
             case 'volume':
                 return this.volumeOpen;
@@ -66,41 +61,6 @@ export class EmbeddedMpvMenuState {
                 return this.speedOpen;
             case 'aspect':
                 return this.aspectOpen;
-        }
-    }
-}
-
-/**
- * Transient feedback overlay shown when the user adjusts volume/seek/mute via
- * keyboard. Caller calls flash() with an icon + label; auto-clears after the
- * given duration.
- */
-export class EmbeddedMpvFeedback {
-    readonly current = signal<{
-        icon: string;
-        label: string;
-        key: number;
-    } | null>(null);
-
-    private timer: number | null = null;
-    private nextKey = 0;
-
-    flash(icon: string, label: string, durationMs = 700): void {
-        if (this.timer !== null) {
-            clearTimeout(this.timer);
-        }
-        this.nextKey += 1;
-        this.current.set({ icon, label, key: this.nextKey });
-        this.timer = window.setTimeout(() => {
-            this.current.set(null);
-            this.timer = null;
-        }, durationMs);
-    }
-
-    dispose(): void {
-        if (this.timer !== null) {
-            clearTimeout(this.timer);
-            this.timer = null;
         }
     }
 }

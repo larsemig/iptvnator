@@ -137,6 +137,13 @@ mpv's own caveats apply: the output container is inferred from the target extens
 
 ## Renderer Architecture And Reactivity
 
+The cross-engine controls layer (the engine-agnostic `PlayerController`
+contract, the shared `app-player-controls` component, the
+`EmbeddedMpvControlsAdapter` / `WebVideoControlsAdapter`, the feature flags, and
+the background-playback readiness analysis) is documented in
+[player-controls-contract.md](./player-controls-contract.md). This section
+covers the embedded-MPV-specific native/session internals.
+
 The Angular side of the embedded MPV player is intentionally split so the player component stays a view-only orchestrator. The renderer files live under `libs/ui/playback/src/lib/embedded-mpv-player/`:
 
 - `embedded-mpv-format.utils.ts` — pure helpers (`formatTime`, `audioTrackLabel`, `subtitleTrackLabel`, `speedLabel`, `aspectLabel`, `volumeIcon`, `volumeLabel`, `readStoredVolume`, `persistVolume`, `measureBounds`) and preset constants (`SPEED_PRESETS`, `ASPECT_PRESETS`, `HIDDEN_BOUNDS`, `MENU_OPEN_BOTTOM_CUTOUT_PX`).
@@ -155,6 +162,12 @@ The native video host paints outside the normal DOM stacking model, so any DOM r
 - **Idle** → full host bounds.
 
 The viewport DOM element also reserves `--embedded-mpv-controls-height` (64 px) at the bottom when controls are enabled, so the controls strip itself is always DOM and always reachable for hover-to-reveal even before the popover-cutout takes effect.
+
+### Shipped path: docked controls
+
+The shipped embedded-MPV player is **docked-only**. The shared `app-player-controls` render inline in the MAIN window and the native MPV surface is composited ABOVE the WebContents (native ordering `NSWindowAbove`), shrunk into a strip-docked rect so the controls and any open menu remain DOM-reachable. There is no child window and no overlay IPC: `EmbeddedMpvPlayerComponent` always runs the docked compositor (`createEmbeddedMpvBoundsProvider`), which maps to `HIDDEN_BOUNDS` while a MatDialog occludes the surface, removes `MENU_OPEN_BOTTOM_CUTOUT_PX` while a popover is open, removes `CONTROLS_DOCK_PX` while the controls strip is visible, and is full-bleed when controls are hidden (the fullscreen black-border fix). Fullscreen runs the controls component's built-in `ControlsFullscreen` against the player root element.
+
+Evaluated and deferred: a full-bleed **transparent-window overlay** (option b — float the controls over a transparent viewport with the native surface below the WebContents, or a separate transparent child window above it) was prototyped to remove the dock band entirely. It was deferred because it requires the global `transparent: true` BrowserWindow setting plus extra macOS window chrome / click-through plumbing whose cost outweighed the benefit over the docked path. The docked strip is the maintained, shipped approach.
 
 ### Reactivity rules (signals and effects)
 

@@ -1,4 +1,4 @@
-export interface EmbeddedMpvShortcutHandlers {
+export interface ControlsShortcutHandlers {
     isAvailable: () => boolean;
     onEscape: () => void;
     togglePaused: () => void;
@@ -8,11 +8,11 @@ export interface EmbeddedMpvShortcutHandlers {
     toggleMute: () => void;
 }
 
-export class EmbeddedMpvShortcuts {
-    private handlers: EmbeddedMpvShortcutHandlers | null = null;
+export class ControlsShortcuts {
+    private handlers: ControlsShortcutHandlers | null = null;
     private readonly listener = (event: KeyboardEvent) => this.handle(event);
 
-    attach(handlers: EmbeddedMpvShortcutHandlers): void {
+    attach(handlers: ControlsShortcutHandlers): void {
         this.handlers = handlers;
         if (typeof document !== 'undefined') {
             document.addEventListener('keydown', this.listener);
