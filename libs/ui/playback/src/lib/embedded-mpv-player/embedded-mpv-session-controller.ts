@@ -122,6 +122,21 @@ export class EmbeddedMpvSessionController {
         this.activeBoundsSync?.();
     }
 
+    /**
+     * Toggle fullscreen "fill" mode on the native surface so it fills the window
+     * via an autoresizing mask and grows with the window's resize animation.
+     * No-op without a session or without the native bridge.
+     */
+    setFill(fill: boolean): void {
+        const id = this.sessionId();
+        if (!id) {
+            return;
+        }
+        void window.electron
+            ?.setEmbeddedMpvFill?.(id, fill)
+            .catch(() => undefined);
+    }
+
     retry(): void {
         this.stalledTracker.reset();
         this.session.set(null);
