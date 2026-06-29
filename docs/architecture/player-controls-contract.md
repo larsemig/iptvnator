@@ -3,7 +3,7 @@
 This document is the canonical reference for IPTVnator's player-controls
 architecture: the engine-agnostic **contract** every player implements, the
 shared **default controls** component, the per-engine **adapters**, the embedded
-MPV **docked** compositing path, the feature
+MPV **immersive overlay** compositing path, the feature
 **flags**, and the **background-playback readiness** of the design.
 
 It is the deliverable for the epic
@@ -63,8 +63,8 @@ assumptions, so they can later be hosted above the router.
               ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │                       COMPOSITING LAYER (MPV only)                     │
-│   docked: native surface composited above WebContents, shrunk into    │
-│   a strip-docked rect so the inline controls/menus stay DOM-reachable  │
+│   immersive: native surface composited BELOW WebContents, full-bleed; │
+│   a transparent hole in a global backdrop reveals it; controls float  │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -107,20 +107,24 @@ against the player surface element. The contract has **no component-lifecycle
 assumptions** — a controller may live above the router (see
 [Background-playback readiness](#background-playback-readiness)).
 
-### Fullscreen (`ControlsFullscreen`)
+### Fullscreen (`ControlsFullscreen` + optional delegate)
 
-The controls run fullscreen against their own player-surface element via the
-built-in `ControlsFullscreen` helper for every engine (docked embedded MPV and
-all web players):
+By default the controls run fullscreen against their own player-surface element
+via the built-in `ControlsFullscreen` helper — DOM `requestFullscreen()` — which
+is what the web engines use:
 
 - `isFullscreen()` — the icon/label and cursor-hide read this.
 - `canFullscreen()` — gates the fullscreen button's `disabled` state.
 - `toggle()` — DOM `requestFullscreen()` / `exitFullscreen()` on the surface.
 
-There is no external fullscreen delegate. The transparent-window overlay path
-that once required one (a child window whose own host could not be fullscreened)
-was deferred — see [MPV compositing](#mpv-compositing-docked) — so the docked
-player simply fullscreens its real player root element directly.
+A host may instead supply an optional **`PlayerFullscreenController`** delegate
+(the `fullscreenController` input; resolved in `controls-fullscreen-binding.ts`).
+When present it replaces the built-in DOM path. The embedded-MPV player supplies
+one that drives **real macOS native fullscreen** of the Electron window
+(`setMainWindowFullScreen` → `win.setFullScreen`), because DOM `requestFullscreen`
+on its transparent, native-below surface ghosts/blacks out. Web/PWA players omit
+the delegate and keep the built-in helper. See
+[MPV compositing](#mpv-compositing-immersive-overlay) and `player-controls-refactor.md`.
 
 Shared defaults live in
 `libs/ui/playback/src/lib/player-controls/player-controls-defaults.ts`
@@ -175,24 +179,25 @@ Video.js, html5+hls.js, and ArtPlayer. Track access is injected via
 A `tick` signal bumped on every media event recomputes the reactive state.
 Wired through `web-video-controls.host.ts`.
 
-## MPV compositing: docked
+## MPV compositing: immersive overlay
 
 The native MPV video surface paints outside the DOM stacking model, so DOM
-controls cannot reliably z-index above it. The shipped approach is **docked**:
-the inline `<app-player-controls>` render in the main window and the native
-surface is composited ABOVE the WebContents (`NSWindowAbove`), shrunk into a
-strip-docked rect so the controls strip and any open popover stay DOM-reachable.
-The pure bounds provider (`embedded-mpv-compositor.ts`) computes that rect:
-`HIDDEN_BOUNDS` while a MatDialog occludes the surface, a bottom cutout while a
-popover is open, a `CONTROLS_DOCK_PX` reduction while the strip is visible, and
-full-bleed when controls are hidden. See
-[embedded-mpv-native.md → Shipped path: docked controls](./embedded-mpv-native.md#shipped-path-docked-controls)
+controls cannot reliably z-index above it. The shipped approach inverts the
+problem: the native surface is composited **below** the WebContents
+(`NSWindowBelow`) and is **always full-bleed**. While a frame is on screen the
+web layer is made transparent and a single global backdrop paints an opaque field
+with one transparent **hole** at the measured video rect
+(`EmbeddedMpvImmersiveService` + `embedded-mpv-immersive-backdrop`); the inline
+`<app-player-controls>` float over the hole as ordinary DOM, and modals/popovers
+paint normally on top. The pure bounds provider (`embedded-mpv-compositor.ts`,
+`measureBounds`) keeps the surface aligned with the viewport. See
+[embedded-mpv-native.md → Shipped path: immersive overlay](./embedded-mpv-native.md#shipped-path-immersive-overlay)
 for the native/IPC and cross-platform detail.
 
-A full-bleed **transparent-window overlay** (option b) was evaluated and
-deferred: it needs the global `transparent: true` BrowserWindow setting plus
-extra macOS window chrome / click-through plumbing, a cost that outweighed the
-benefit over the docked strip.
+The earlier **docked strip** (`NSWindowAbove`, with `HIDDEN_BOUNDS`/cutout bound
+shapes) and **child-window overlay** approaches were prototyped and rejected;
+this immersive overlay (a variant of the transparent-window option) is the
+shipped path. See `player-controls-refactor.md` for the full rationale.
 
 ## Feature flags
 
@@ -225,9 +230,14 @@ libs/ui/playback/src/lib/player-controls/
 libs/ui/playback/src/lib/embedded-mpv-player/
 ├── embedded-mpv-controls.adapter.ts        # libmpv session → contract
 ├── embedded-mpv-session-controller.ts      # session lifecycle + IPC + bounds sync
-├── embedded-mpv-player.component.ts         # view shell: native surface + docked controls
-├── embedded-mpv-overlay-visibility.service.ts  # hides native view behind MatDialogs
-└── embedded-mpv-compositor.ts               # pure docked bounds provider
+├── embedded-mpv-command-runner.ts          # imperative IPC command surface
+├── embedded-mpv-session-factory.ts         # pure session-snapshot constructors
+├── embedded-mpv-immersive.service.ts       # transparency-tunnel owner (active/fullscreen/rect)
+├── embedded-mpv-immersive-backdrop.component.ts  # opaque field + transparent hole at video rect
+├── embedded-mpv-compositor.ts              # pure full-bleed bounds provider (measureBounds)
+├── embedded-mpv-stalled-tracker.ts         # "taking longer than expected" state
+├── embedded-mpv-labels.ts                  # label/format helpers + presets
+└── embedded-mpv-player.component.ts        # view shell: native surface + immersive overlay
 ```
 
 ## Background-playback readiness
@@ -251,10 +261,10 @@ libs/ui/playback/src/lib/embedded-mpv-player/
   `window.electron.disposeEmbeddedMpvSession(id)`. This single teardown closure
   is the only place the session is torn down on navigation — the contained seam
   04 must change.
-- The **native surface** is decoupled from disposal: the docked compositor only
-  positions / hides the native view (e.g. `HIDDEN_BOUNDS` behind a MatDialog) and
-  **never disposes the session**. So "occlude while away, reveal on return" comes
-  largely for free — only the bounds need re-attaching on return.
+- The **native surface** is decoupled from disposal: the bounds provider only
+  positions the (full-bleed, below-WebContents) native view and **never disposes
+  the session**. So "occlude while away, reveal on return" comes largely for free
+  — only the bounds need re-attaching on return.
 
 ### Why 04 is contained (the seam)
 
@@ -281,8 +291,8 @@ libs/ui/playback/src/lib/embedded-mpv-player/
   disposed only on **genuine stop / app quit** (and on playback replacement).
   The current single teardown closure in `startSession` is where this behavior
   is owned today.
-- On **return** to the player view, re-attach native bounds via the docked
-  compositor (no session recreation needed).
+- On **return** to the player view, re-attach native bounds via the bounds
+  provider (no session recreation needed).
 - Keep leak-safety: sessions are still disposed on genuine stop / app quit.
 
 ### Web-player limitation
