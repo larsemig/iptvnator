@@ -172,6 +172,13 @@ export class ArtPlayerComponent implements OnInit, OnDestroy, OnChanges {
                   screenshot: false,
                   airplay: false,
                   autoMini: false,
+                  // `autoSize` resizes the whole `.art-video-player` element to
+                  // the video's aspect ratio, leaving black margins inside the
+                  // container — which the full-bleed overlay then spans (most
+                  // visible in fullscreen). The shared-controls layout fills the
+                  // container and lets the `<video>`'s object-fit handle real
+                  // stream letterboxing instead.
+                  autoSize: false,
               }
             : {
                   pip: true,
