@@ -336,11 +336,12 @@
     bottom: calc(100% + 6px);
     right: 0;
     display: grid;
-    // Shrink the slider column on very narrow players so the popover never
-    // spills past the player's edges.
-    grid-template-columns: minmax(0, 200px);
+    grid-template-columns: 1fr;
     gap: 4px;
-    max-width: min(200px, calc(100cqw - 24px));
+    // Comfortable fixed width for the slider; only clamp on players too narrow
+    // to fit it so the popover never spills past the player's edges.
+    width: 200px;
+    max-width: calc(100cqw - 24px);
     padding: 12px 14px 10px;
     z-index: 3;
 }
