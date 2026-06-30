@@ -15,6 +15,12 @@
     // stays interactive; only the bar/popovers opt back in to pointer events.
     pointer-events: none;
     color: var(--pc-text);
+    // Become a query container so popovers can size against the actual player
+    // box (the host fills the player via inset:0) instead of fixed pixels or
+    // the viewport — they grow to fit when there is room and shrink to scroll
+    // when the player is small, never spilling past its edges.
+    container-type: size;
+    container-name: player-controls;
 }
 
 .player-controls__feedback {
@@ -330,8 +336,11 @@
     bottom: calc(100% + 6px);
     right: 0;
     display: grid;
-    grid-template-columns: minmax(160px, 200px);
+    // Shrink the slider column on very narrow players so the popover never
+    // spills past the player's edges.
+    grid-template-columns: minmax(0, 200px);
     gap: 4px;
+    max-width: min(200px, calc(100cqw - 24px));
     padding: 12px 14px 10px;
     z-index: 3;
 }
@@ -361,13 +370,23 @@
     position: absolute;
     bottom: calc(100% + 6px);
     right: 0;
+    display: flex;
+    flex-direction: column;
     min-width: 220px;
-    max-width: min(420px, 80vw);
+    // Cap to the player box (minus a small gutter) so the panel never spills
+    // past the player's edges on small windows; falls back to the viewport
+    // where container units are unavailable.
+    max-width: min(420px, calc(100cqw - 24px), 80vw);
+    // Height grows to fit the list; only when it would exceed the room above
+    // the controls bar does the inner list start scrolling. 96px ≈ the controls
+    // bar height plus the 6px gap and a little breathing room.
+    max-height: min(calc(100cqh - 96px), 70vh);
     padding: 10px 12px;
     z-index: 3;
 }
 
 .player-controls__menu-title {
+    flex: 0 0 auto;
     padding: 0 2px 6px;
     color: rgba(255, 255, 255, 0.7);
     font-size: 0.7rem;
@@ -381,7 +400,11 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    max-height: 240px;
+    // No fixed cap: the panel's max-height bounds the popover, and the title
+    // above stays pinned while this list takes the remaining space and scrolls
+    // only when the content genuinely exceeds it.
+    flex: 0 1 auto;
+    min-height: 0;
     overflow-y: auto;
     scrollbar-width: thin;
 }
