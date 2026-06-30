@@ -340,7 +340,7 @@
     gap: 4px;
     // Comfortable fixed width for the slider; only clamp on players too narrow
     // to fit it so the popover never spills past the player's edges.
-    width: 200px;
+    width: 168px;
     max-width: calc(100cqw - 24px);
     padding: 12px 14px 10px;
     z-index: 3;
@@ -363,7 +363,7 @@
     color: var(--pc-text-dim);
     font-size: 0.74rem;
     font-variant-numeric: tabular-nums;
-    text-align: right;
+    text-align: center;
     white-space: nowrap;
 }
 
