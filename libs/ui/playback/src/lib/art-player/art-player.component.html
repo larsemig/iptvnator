@@ -1,4 +1,7 @@
-<div class="art-player-shell">
+<div
+    class="art-player-shell"
+    [class.art-player-shell--shared-controls]="sharedControls"
+>
     <div #artplayer class="artplayer-container"></div>
 
     @if (sharedControls) {
