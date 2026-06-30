@@ -292,6 +292,13 @@ describe('ArtPlayerComponent', () => {
         expect(
             fixture.debugElement.query(By.css('app-player-controls'))
         ).toBeNull();
+        expect(
+            fixture.debugElement
+                .query(By.css('.art-player-shell'))
+                .nativeElement.classList.contains(
+                    'art-player-shell--shared-controls'
+                )
+        ).toBe(false);
     });
 
     it('hides series navigation controls when series navigation is absent', () => {
@@ -384,6 +391,15 @@ describe('ArtPlayerComponent', () => {
             expect(
                 fixture.debugElement.query(By.css('app-player-controls'))
             ).not.toBeNull();
+            // Drives the SCSS that isolates ArtPlayer's stacking context and
+            // hides its leftover chrome so the overlay is the only UI on top.
+            expect(
+                fixture.debugElement
+                    .query(By.css('.art-player-shell'))
+                    .nativeElement.classList.contains(
+                        'art-player-shell--shared-controls'
+                    )
+            ).toBe(true);
         });
     });
 
