@@ -104,6 +104,12 @@ describe('ArtPlayerComponent', () => {
 
         TestBed.configureTestingModule({
             imports: [ArtPlayerComponent],
+            // Pin the rollout flag OFF so these tests are deterministic
+            // regardless of the shipped default (the dedicated describe below
+            // overrides it to ON).
+            providers: [
+                { provide: WEB_PLAYER_SHARED_CONTROLS, useValue: false },
+            ],
         });
     });
 
@@ -388,6 +394,9 @@ describe('ArtPlayerComponent', () => {
             expect(artPlayerInstances[0].options['setting']).toBe(false);
             expect(artPlayerInstances[0].options['fullscreen']).toBe(false);
             expect(artPlayerInstances[0].options['controls']).toEqual([]);
+            // autoSize would shrink the player to the video aspect and leave
+            // black margins the overlay spans — disabled for the shared layout.
+            expect(artPlayerInstances[0].options['autoSize']).toBe(false);
             expect(
                 fixture.debugElement.query(By.css('app-player-controls'))
             ).not.toBeNull();
