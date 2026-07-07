@@ -218,6 +218,39 @@ textarea,
     margin-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
 }
 
+// ─── Immersive embedded-MPV overlay ───────────────────────────────────────────
+// The native MPV video surface composites BELOW the WebContents (macOS), so the
+// web layer must be transparent over the player region for the video to show
+// through. EmbeddedMpvImmersiveService toggles this body class; here we open the
+// tunnel by clearing the opaque layers in the player's ancestor chain. The app
+// stays opaque via a single global backdrop — EmbeddedMpvImmersiveBackdrop
+// (rendered at app root) paints an opaque field with a transparent HOLE at the
+// measured native video rect — so panels show the backdrop instead of needing
+// per-route repaint. No per-route panel selectors here (only fullscreen below).
+body.embedded-mpv-immersive {
+    background-color: transparent; // clear Material's opaque <body> background
+}
+
+body.embedded-mpv-immersive .workspace-shell,
+body.embedded-mpv-immersive .workspace-body,
+body.embedded-mpv-immersive .workspace-content {
+    background: transparent;
+}
+
+// Fullscreen: the player root goes DOM-fullscreen (transparent) over the native
+// video. Hide the surrounding chrome so the transparent fullscreen surface
+// reveals the video filling the screen instead of the UI behind it. (Same
+// per-route panel set as the repaint above; extend as routes are verified.)
+body.embedded-mpv-fullscreen app-workspace-shell-rail,
+body.embedded-mpv-fullscreen app-workspace-shell-header,
+body.embedded-mpv-fullscreen app-workspace-shell-context-sidebar,
+body.embedded-mpv-fullscreen .sidebar.resizable-element,
+body.embedded-mpv-fullscreen app-live-epg-panel,
+body.embedded-mpv-fullscreen .epg,
+body.embedded-mpv-fullscreen .workspace-now-playing {
+    display: none !important;
+}
+
 // WCAG-friendly visually-hidden helper — content stays in the
 // accessibility tree and DOM query results but occupies no layout box.
 // Used where a visible heading would duplicate adjacent navigation
