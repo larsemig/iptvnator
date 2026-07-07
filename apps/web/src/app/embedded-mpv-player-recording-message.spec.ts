@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ResolvedPortalPlayback } from '@iptvnator/shared/interfaces';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
     EmbeddedMpvControlsAdapter,
     EmbeddedMpvPlayerComponent,
@@ -38,6 +38,18 @@ describe('EmbeddedMpvPlayerComponent recording status message', () => {
                 set: { template: '' },
             })
             .compileComponents();
+
+        const translate = TestBed.inject(TranslateService);
+        translate.setTranslation('en', {
+            EMBEDDED_MPV: {
+                PLAYER: {
+                    SAVED_TO: 'Saved to {{path}}',
+                    RECORDING_FAILED_TO_STOP: 'Recording failed to stop.',
+                    RECORDING_FAILED_TO_START: 'Recording failed to start.',
+                },
+            },
+        });
+        translate.use('en');
 
         fixture = TestBed.createComponent(EmbeddedMpvPlayerHostComponent);
         fixture.detectChanges();

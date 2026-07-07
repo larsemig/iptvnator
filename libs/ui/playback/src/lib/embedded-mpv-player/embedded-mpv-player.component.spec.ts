@@ -283,7 +283,7 @@ describe('EmbeddedMpvPlayerComponent native fullscreen', () => {
         };
 
         await TestBed.configureTestingModule({
-            imports: [EmbeddedMpvPlayerHostComponent],
+            imports: [EmbeddedMpvPlayerHostComponent, TranslateModule.forRoot()],
         }).compileComponents();
 
         fixture = TestBed.createComponent(EmbeddedMpvPlayerHostComponent);

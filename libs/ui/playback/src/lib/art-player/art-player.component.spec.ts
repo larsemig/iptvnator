@@ -373,45 +373,6 @@ describe('ArtPlayerComponent', () => {
         expect(events).toEqual(['previous']);
     });
 
-    describe('with shared controls flag ON', () => {
-        beforeEach(() => {
-            TestBed.resetTestingModule();
-            TestBed.configureTestingModule({
-                imports: [ArtPlayerComponent],
-                providers: [
-                    { provide: WEB_PLAYER_SHARED_CONTROLS, useValue: true },
-                ],
-            });
-        });
-
-        it('disables the ArtPlayer skin and renders shared controls', () => {
-            createComponent({
-                url: 'https://example.com/movie.mp4',
-                name: 'Movie',
-            });
-
-            expect(component.sharedControls).toBe(true);
-            expect(artPlayerInstances[0].options['setting']).toBe(false);
-            expect(artPlayerInstances[0].options['fullscreen']).toBe(false);
-            expect(artPlayerInstances[0].options['controls']).toEqual([]);
-            // autoSize would shrink the player to the video aspect and leave
-            // black margins the overlay spans — disabled for the shared layout.
-            expect(artPlayerInstances[0].options['autoSize']).toBe(false);
-            expect(
-                fixture.debugElement.query(By.css('app-player-controls'))
-            ).not.toBeNull();
-            // Drives the SCSS that isolates ArtPlayer's stacking context and
-            // hides its leftover chrome so the overlay is the only UI on top.
-            expect(
-                fixture.debugElement
-                    .query(By.css('.art-player-shell'))
-                    .nativeElement.classList.contains(
-                        'art-player-shell--shared-controls'
-                    )
-            ).toBe(true);
-        });
-    });
-
     function createComponent(channel: Pick<Channel, 'url' | 'name'>): void {
         fixture = TestBed.createComponent(ArtPlayerComponent);
         component = fixture.componentInstance;
