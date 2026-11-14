@@ -230,6 +230,8 @@ describe('PlayerControlsComponent dock', () => {
             expect(jumpButton()?.disabled).toBe(false);
             jumpButton()?.click();
             expect(fake.commands.jumpToLiveEdge).toHaveBeenCalledTimes(1);
+            fixture.detectChanges();
+            expect(query('.player-controls__feedback')).toBeNull();
         });
     });
 

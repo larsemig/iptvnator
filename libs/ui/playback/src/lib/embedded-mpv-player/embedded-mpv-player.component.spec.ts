@@ -299,6 +299,12 @@ describe('EmbeddedMpvPlayerComponent series navigation', () => {
 
         transport[1].click();
         expect(seekBy).toHaveBeenCalledWith(20);
+        fixture.detectChanges();
+        expect(
+            fixture.debugElement.query(
+                By.css('.embedded-mpv-player__feedback')
+            )
+        ).toBeNull();
 
         configureReadyController({
             streamUrl: 'https://example.test/live/101.m3u8',

@@ -434,9 +434,10 @@ one colour in every player surface (UI guidelines, "Watch progress colour").
 directly right of play. It is always enabled: whether there is backlog to
 skip is decided by the engine at click time, because a state flag tracking a
 jittery live buffer made the button flicker.
-`ControlsTransport` owns it together with the ±10s skip: both reveal the
-controls, check capability and state, send the command and flash the centre
-feedback (`fast_forward` · `LIVE_BADGE`). There is no keyboard shortcut.
+`ControlsTransport` owns it together with the ±10s skip. The jump reveals the
+controls and sends the command when the engine offers it. The controls do
+not flash a confirmation because a seek request does not guarantee that
+playback reached the live edge. There is no keyboard shortcut.
 
 Embedded MPV is the only engine that enables it, and only for a live session
 whose mpv `file-format` is `mpegts`; the native-view engine's legacy dock

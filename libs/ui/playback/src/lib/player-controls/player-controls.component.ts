@@ -96,8 +96,6 @@ export class PlayerControlsComponent implements OnDestroy {
         controller: () => this.controller(),
         feedback: this.feedback,
         reveal: () => this.reveal(),
-        liveLabel: () =>
-            this.translate.instant('EMBEDDED_MPV.PLAYER.LIVE_BADGE'),
     });
     readonly layout = new ControlsLayout();
     /** Compact dock: narrow inline players and phone-sized viewports. */
